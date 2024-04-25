@@ -9,6 +9,15 @@ How modern C++ helps write safer and more maintainable software
 * A primer on how the ISO C++ standard expresses design
 * Learn by example using `std::mdspan`
 
+***
+
+|  
+|  
+|  
+
+***
+
+
 ### mdspan - a comparison to Kokkos::View
 
 `std::mdspan` is a C++ 23 facility based on `Kokkos::View`
@@ -24,6 +33,15 @@ template<class DataType, class Layout, class MemorySpace, class MemoryTraits>
 class View
 ```
 
+***
+
+|  
+|  
+|  
+
+***
+
+
 #### DataType
 
 * `DataType` is a split into `ElementType` and `Extents`
@@ -31,6 +49,15 @@ class View
 * `mdspan` allows arbitrary mixing of compiler vs runtime extents
 * `extents` has a mandatory `index_type` specifier
 * `dextents<IndexType, Rank>` shortcut for all dynamic extents
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 #### Layout
 
@@ -41,6 +68,15 @@ class View
 * this is a customization point: write your own layouts - now well defined how ...
 * default layout for `mdspan` is `layout_right`
 
+***
+
+|  
+|  
+|  
+
+***
+
+
 #### MemorySpace and MemoryTraits
 
 * these can be expressed via `Accessor`
@@ -48,6 +84,15 @@ class View
 * ISO C++26 will likely add `atomic_accessor`, `aligned_accessor` and some linear algebra things
 * this is a customization point: write your own accessors - now well defined how ...
   * we will provide in Kokkos memory space aware accessors etc.
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 #### Some examples
 
@@ -78,6 +123,34 @@ static_assert(a.rank() == b.rank());
 
 Full specification: [ISO C++ Draft containers.views.multidim](https://eel.is/c++draft/views.multidim)
 
+***
+
+|  
+|  
+|  
+
+***
+
+### MDSpan Support in Kokkos
+
+* We are shipping C++23 `mdspan` in the Kokkos namespace
+* compatible with C++17 and C++20
+  * biggest difference: use `()` operator instead of `[]` operator for data access
+* Device enabled
+* C++26 capabilities (`submdspan`, `padded` layouts, etc.) upcoming (likely Kokkos 4.4)
+* Also Kokkos 4.4: Interoperability betwen `mdspan` and `View`:
+  * Construct `mdspan` from `View`
+  * Construct (unmanaged) `View` from `mdspan`
+* Post Kokkos 4.4: support for `mdspan` in functions such as `deep_copy` etc.
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 ## ISO C++ Elements of Library Function Specification
 
@@ -90,6 +163,15 @@ Here I want to look at the ones which express limitations and requirements for u
 * **Preconditions**: runtime conditions
 
 For a description of all see: [ISO C++ Draft structure.specifications](https://eel.is/c++draft/structure#specifications-3)
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 #### Start with an example
 
@@ -110,6 +192,15 @@ Calling it with a rank-2 `mdspan` would result in compile time error ([Godbolt R
 <source>:8:5: error: no viable overloaded operator[] for type 'std::mdspan<int, extents<unsigned long, 18446744073709551615, 18446744073709551615>, layout_right, default_accessor<int>>'
     8 |     dest[i0] += src[i0];
 ```
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 ### Using Mandates for a better error message
 
@@ -151,6 +242,15 @@ Now the error message is:
       |
 ```
 
+***
+
+|  
+|  
+|  
+
+***
+
+
 ### Enabling add for vectors and matrices via constraints
 
 To enable it for both rank-1 and rank-2 we need two overloads: in the ISO C++ specification we use **Constraints**:
@@ -175,6 +275,15 @@ void add(mdspan<T1,E1,L1,A1> dest, mdspan<T2,E2,L2,A2> src);
   * `src.rank() == 2` is `true`.
 * Effects: For every multi-dimensional index in `i` in `dest.extents()` perform `dest[i...] += src[i...]`. 
 
+***
+
+|  
+|  
+|  
+
+***
+
+
 In C++17 we can achieve constraints for a single function overlaod exploiting SFINAE (Substitution failure is not an error):
 
 ```c++
@@ -194,6 +303,15 @@ Modern clang actually knows this pattern and already gives a decent-ish error me
       |      ^
 1 error generated.
 ```
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 But to get something which works for both we need to jump through hoops, the easiest way is to add a defaulted argument (not template argument):
 
@@ -221,6 +339,15 @@ void add(std::mdspan<T1,E1,L1,A1> dest, std::mdspan<T2,E2,L2,A2> src,
 The nasty thing is that both require some extra arguments: either template or function argument.
 
 *C++20 fixes this with the* `requires` *clause*!
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 
 #### Constraints with requires
@@ -265,6 +392,15 @@ Now the error message without the second overload is even better saying that the
       |          ^
 ```
 
+***
+
+|  
+|  
+|  
+
+***
+
+
 Another slightly more elaborate overload set, with scalar add: [https://godbolt.org/z/188x4d33h](https://godbolt.org/z/188x4d33h).
 
 It uses a more elaborate requires clause with pure template function parameters constraint via `requires`:
@@ -286,6 +422,15 @@ void add(T1& v1, T2 v2) {
   v1 += v2;
 }
 ```
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 #### Constraint order matters
 
@@ -321,6 +466,15 @@ Resulting in:
 
 See here for both errors: [Godbolt errors depend on constraint order](https://godbolt.org/z/oT6W4dsz3)
 
+***
+
+|  
+|  
+|  
+
+***
+
+
 #### Checking for well formed expressions
 
 We can also check that the `+=` actually works (e.g. you don't call the function with `mdspan` of `std::array`):
@@ -340,6 +494,15 @@ requires(
 
 Note: the switch of order (requires after the function signature) to be able to use `dest` and `src`.
 Here is the [Godbolt code with check for addable](https://godbolt.org/z/aMq7EMe3e)
+
+***
+
+|  
+|  
+|  
+
+***
+
 
 ### Adding preconditions
 
@@ -367,6 +530,15 @@ requires(
 
 But sometimes we can check the `extents` at compile time! We should catch that if possible!
 
+***
+
+|  
+|  
+|  
+
+***
+
+
 It doesn't make much sense to do it as a *Constraint* - nobody wants a different overload of `add` for that.
 
 ```c++
@@ -391,6 +563,15 @@ requires(
 
 See the error here: [Godbolt with mismatching static extents](https://godbolt.org/z/bG7fj3GW9)
 
+
+***
+
+|  
+|  
+|  
+
+***
+
 ### The complete specification in ISO C++ style:
 
 ```c++
@@ -411,4 +592,254 @@ void add(T1 dest, T2 src);
 
 And here is the code: [Godbolt with all the things](https://godbolt.org/z/5n38ovo9z).
 
-### Issues 
+***
+
+|  
+|  
+|  
+
+***
+
+
+### Constraints and Mandates for Constructors
+
+All the above also applies to constructors - however there is one big issue: *Mandates* are not taking into account by traits such as `is_constructible_v`!
+
+Consider the following matrix class:
+
+
+```c++
+template<class T, size_t N, size_t M>
+struct Matrix {
+  T data[N*M];
+  std::mdspan<T, std::extents<int, N, M>> v;
+  template<class U, class E, class L, class A>
+  Matrix(std::mdspan<U, E, L, A> d):v(data) {
+    for(int i=0; i<N; i++)
+      for(int j=0; j<N; j++)
+        v[i,j] = d[i,j];
+
+  }
+}; 
+```
+
+You may want to have mandates as the ones we had for `add` in the constructor such as:
+
+```c++
+  static_assert(
+    (E::static_extent(0) == std::dynamic_extent) ||
+    (E::static_extent(0) == N),
+    "Mismatching static extents are not allowed"
+  );
+```
+
+However, `is_constructible_v<Matrix<float, 5,5>, mdspan<float, extents<int, 4,4>>>` is `true`, even though
+
+```c++
+std::mdspan<float, std::extents<int, 4,4>> v(ptr1);
+Matrix<float, 5,5> m(v);
+```
+
+will not compile [Godbolt Constructor with static assert](https://godbolt.org/z/esfcd3dxe)!
+
+
+**Mandates in constructors (i.e. static_assert) are strongly discouraged!**
+
+***
+
+|  
+|  
+|  
+
+***
+
+
+#### Preconditions for constructors and explicit
+
+Another thing to check in the above constructor is a precondition whether a runtime size matches the `Matrix` size:
+
+```c++
+assert(v.extent(0) == N);
+```
+
+*Best Practice:* Make constructors that could result in a throw (conditionally) explicit!
+
+```c++
+template<class U, class E, class L, class A>
+explicit(E::static_extent(0) == std::dynamic_extent ||
+         E::static_extent(1) == std::dynamic_extent)
+Matrix(std::mdspan<U, E, L, A> d)i
+```
+
+And here is the full thing with constraints and precondition [Godbolt Matrix Class Example](https://godbolt.org/z/rhhvx14fM)
+
+
+***
+
+|  
+|  
+|  
+
+***
+
+
+## Summary Constraints, Mandates, Preconditions
+
+* *Constraints*: build overload sets - compile time check, is this call valid?
+  * C++20 use `requires` clause
+  * C++17 implemented via SFINAE
+* *Mandates*: catch errors inside functions one never would want to cover with different overload
+  * `static_assert` inside the function
+  * Careful in constructors - generally not recommended because `is_constructible_v` does not take this into account
+* *Preconditions*: catch runtime errors
+  * `assert` or `throw` inside the function
+  * for constructors: often good to have matchin conditional `explicit` clause! 
+
+
+***
+
+|  
+|  
+|  
+
+***
+
+## if constexpr as an alternative to overload sets
+
+There is an alternative to overload sets: `if constexpr`
+
+This enables you to have finegrained code sections which get compiled conditionally within a single block.
+
+Lets look at the `add` function with that approach:
+
+```c++
+template<class T1, class T2>
+requires(
+    is_mdspan_v<T1> && is_mdspan_v<T2> &&
+    T1::rank()==T2::rank()
+)
+void add(T1 dest, T2 src) {
+  static_assert(T1::rank() == 1 || T1::rank() == 2);
+
+  if constexpr (T1::rank() == 1) {
+    assert(dest.extent(0) == src.extent(0));
+    for(int i0; i0<dest.extent(0); i0++)
+      dest[i0] += src[i0];
+  } else {
+    assert(dest.extent(0) == src.extent(0));
+    assert(dest.extent(1) == src.extent(1));
+    for(int i0; i0<dest.extent(0); i0++)
+      for(int i1; i1<dest.extent(1); i1++)
+        dest[i0, i1] += src[i0, i1];
+  }
+}
+```
+
+* Condition inside `if constexpr` must be constant evaluable
+* `if` - `else if` - `else` nesting is fine
+
+Code: [Godbolt if constexpr](https://godbolt.org/z/fsvEEqWb1)
+
+***
+
+|  
+|  
+|  
+
+***
+
+
+## Some thoughts on constexpr as function attribute
+
+Consider a simplified version of `std::extents`:
+
+```c++
+template<size_t N>
+struct exts {
+  constexpr static size_t static_extent() { return N; }
+  constexpr size_t extent() const { return N; }
+};
+
+template<>
+struct exts<std::dynamic_extent> {
+  size_t N;
+  constexpr exts(size_t val):N(val) {};
+  constexpr static size_t static_extent() { return std::dynamic_extent; }
+  constexpr size_t extent() const { return N; }
+};
+```
+
+Everything in here is `constexpr` - that doesn't mean you can always use every function in constant expressions!
+  
+  
+`constexpr` means: you can use it in constant expressions if all the inputs are available at compile time!
+
+Full code exmaple for this and following: [Godbolt constexpr explanation](https://godbolt.org/z/eb3jv7aK7)
+
+
+***
+
+|  
+|  
+|  
+
+***
+
+### Fully static use case
+
+When you use the fully static version, both `static_extent` and `extent` can be used as constant expressions:
+
+```c++
+    exts<5> ext_static;
+    if constexpr (ext_static.static_extent()==5) {
+        printf("static 1\n");
+    }
+    if constexpr (ext_static.extent()==5) {
+        printf("static 2\n");
+    }
+```
+
+* You also can use both functions as template arguments
+
+
+***
+
+|  
+|  
+|  
+
+***
+
+### Dynamic use case
+
+If something is dynamic you can't do that - depending on the place not even if the constructor argument was compile time known:
+
+```c++
+    exts<std::dynamic_extent> ext_dynamic(5);
+    if constexpr (ext_dynamic.static_extent()==5) {
+        printf("static 1\n");
+    }
+    // this doesn't work
+    if constexpr (ext_dynamic.static_extent()==5) {
+        printf("static 1\n");
+    }
+```
+
+But you can if its inside a wrapped in another contexpr function:
+
+```c++
+template<class Ext>
+constexpr size_t foo() {
+  Ext e(5);
+  return e.extent();
+};
+```
+
+Now this works:
+```c++
+    if constexpr (foo<decltype(ext_dynamic)>()==5) {
+        printf("dynamic not really\n");
+    }
+```
+
+
