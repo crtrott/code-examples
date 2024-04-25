@@ -1,4 +1,4 @@
-# Contraints, Mandates and Constexpr
+# Constraints, Mandates and Constexpr
 
 How modern C++ helps write safer and more maintainable software
 
