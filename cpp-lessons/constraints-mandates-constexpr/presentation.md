@@ -2,6 +2,7 @@
 
 How modern C++ helps write safer and more maintainable software
 
+Follow along: [https://github.com/crtrott/code-examples/tree/cpp-lessons-1/cpp-lessons/constraints-mandates-constexpr](https://github.com/crtrott/code-examples/tree/cpp-lessons-1/cpp-lessons/constraints-mandates-constexpr)
 
 ### What is this about?
 
